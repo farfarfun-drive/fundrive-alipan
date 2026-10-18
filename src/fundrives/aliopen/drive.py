@@ -86,10 +86,7 @@ class Base:
         """
         method = method.lower()
 
-        if uri.startswith("https://"):
-            url = uri
-        else:
-            url = f"{self.base_url}/{uri}"
+        url = uri if uri.startswith("https://") else f"{self.base_url}/{uri}"
 
         try:
             response = requests.request(
