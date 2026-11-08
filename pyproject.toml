@@ -1,6 +1,6 @@
 [project]
 name = "fundrive-alipan"
-version = "2.0.91"
+version = "2.0.96"
 description = "fundrive-alipan"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -22,9 +22,9 @@ email = "niuliangtao@qq.com"
 name = "farfarfun"
 email = "farfarfun@qq.com"
 [project.urls]
-Organization = "https://github.com/farfarfun-drive"
-Repository = "https://github.com/farfarfun-drive/fundrive-alipan"
-Releases = "https://github.com/farfarfun-drive/fundrive-alipan/releases"
+Organization = "https://github.com/farfarfun"
+Repository = "https://github.com/farfarfun/fundrive-alipan"
+Releases = "https://github.com/farfarfun/fundrive-alipan/releases"
 
 [build-system]
 requires = ["hatchling"]
