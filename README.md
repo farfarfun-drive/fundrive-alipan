@@ -48,9 +48,9 @@ for item in result.get("items", []):
 ```python
 from funsecret import write_secret
 
-write_secret("your-client-id", "fundrive", "drives", "alipan", "client_id")
-write_secret("your-client-secret", "fundrive", "drives", "alipan", "client_secret")
-write_secret("your-refresh-token", "fundrive", "drives", "alipan", "refresh_token")
+write_secret("your-client-id", "fundrive", "drives", "aliopen", "client_id")
+write_secret("your-client-secret", "fundrive", "drives", "aliopen", "client_secret")
+write_secret("your-refresh-token", "fundrive", "drives", "aliopen", "refresh_token")
 ```
 
 配置完成后 `manage.login()` 可以不传任何参数。

@@ -86,7 +86,11 @@ class Base:
         """
         method = method.lower()
 
-        url = uri if uri.startswith("https://") else f"{self.base_url}/{uri}"
+        url = (
+            uri
+            if uri.startswith("https://")
+            else f"{self.base_url.rstrip('/')}/{uri.lstrip('/')}"
+        )
 
         try:
             response = requests.request(
@@ -168,13 +172,13 @@ class UserInfo(Base):
         :return: 无返回值，登录成功后 ``self.auth``、``self.drive_id`` 会被填充
         """
         refresh_token = refresh_token or read_secret(
-            "fundrive", "drives", "alipan", "refresh_token"
+            "fundrive", "drives", "aliopen", "refresh_token"
         )
         client_id = client_id or read_secret(
-            "fundrive", "drives", "alipan", "client_id"
+            "fundrive", "drives", "aliopen", "client_id"
         )
         client_secret = client_secret or read_secret(
-            "fundrive", "drives", "alipan", "client_secret"
+            "fundrive", "drives", "aliopen", "client_secret"
         )
         self.auth = AliPanAuth(
             client_id=client_id,

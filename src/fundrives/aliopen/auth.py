@@ -183,12 +183,14 @@ class AliPanAuth:
             "client_secret": self._client_secret,
         }
         if data["code"] is None and data["refresh_token"] is None:
-            logger.error("No authorization code provided")
             return self.qrcode_login()
 
         url = f"{self.openapi_domain}/oauth/access_token"
         resp = self._request("post", url, json=data)
-        return resp.json()
+        result = resp.json()
+        if result.get("refresh_token"):
+            self._refresh_token = result["refresh_token"]
+        return result
 
     def qrcode_login(self) -> dict[str, str]:
         """通过终端打印二维码，等待用户扫码完成登录。

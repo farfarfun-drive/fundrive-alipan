@@ -77,6 +77,37 @@ class TestAliPanAuth:
         url = auth.qrcode_url("sid-123")
         assert url == "https://www.aliyundrive.com/o/oauth/authorize?sid=sid-123"
 
+    def test_refresh_uses_new_token_returned_by_oauth(self):
+        from fundrives.aliopen import AliPanAuth
+
+        auth = AliPanAuth(
+            client_id="cid", client_secret="csecret", refresh_token="old-token"
+        )
+        responses = [
+            mock.Mock(
+                **{
+                    "json.return_value": {
+                        "access_token": "a1",
+                        "refresh_token": "new-token",
+                    }
+                }
+            ),
+            mock.Mock(
+                **{
+                    "json.return_value": {
+                        "access_token": "a2",
+                        "refresh_token": "next-token",
+                    }
+                }
+            ),
+        ]
+        with mock.patch.object(auth, "_request", side_effect=responses) as request:
+            auth.get_access_token(auth_code="code-1")
+            auth.get_access_token()
+
+        assert request.call_args_list[1].kwargs["json"]["refresh_token"] == "new-token"
+        assert auth._refresh_token == "next-token"
+
     def test_qrcode_login_returns_token_after_scan_succeeds(self):
         """二维码登录在轮询到 LoginSuccess 后用授权码换取 token。"""
         from fundrives.aliopen import AliPanAuth
@@ -163,6 +194,28 @@ class TestAliOpenManage:
         assert manage.base_url == "https://example.com"
         assert manage.drive_id == "drive-1"
 
+    def test_request_joins_relative_urls_once_and_preserves_absolute_urls(self):
+        from fundrives.aliopen import AliOpenManage
+
+        manage = AliOpenManage(base_url="https://example.com/api/")
+        manage.auth = mock.Mock()
+        manage.auth.get_access_token.return_value = {"access_token": "tok"}
+        response = mock.Mock(status_code=200)
+        response.json.return_value = {}
+
+        with mock.patch(
+            "fundrives.aliopen.drive.requests.request", return_value=response
+        ) as request:
+            manage.get("/v1/items")
+            manage.get("v1/items")
+            manage.get("https://other.example/v1/items")
+
+        assert [call.args[1] for call in request.call_args_list] == [
+            "https://example.com/api/v1/items",
+            "https://example.com/api/v1/items",
+            "https://other.example/v1/items",
+        ]
+
     def test_mro_chains_through_expected_mixins(self):
         """AliOpenManage 应该继承自 drive.py 中定义的完整能力链。"""
         from fundrives.aliopen import AliOpenManage
@@ -232,11 +285,7 @@ class TestAliOpenManage:
 
         assert result == {"items": []}
         assert captured["method"] == "post"
-        # 注意：Base._request 用 f"{base_url}/{uri}" 拼接，当 uri 以 "/" 开头时
-        # 会产生双斜杠（预置的小瑕疵，不在本次冒烟测试修复范围内，这里按实际行为断言）。
-        assert (
-            captured["url"] == "https://openapi.alipan.com//adrive/v1.0/openFile/list"
-        )
+        assert captured["url"] == "https://openapi.alipan.com/adrive/v1.0/openFile/list"
         assert captured["json"]["drive_id"] == "drive-xyz"
         assert captured["json"]["parent_file_id"] == "root"
 
@@ -271,6 +320,26 @@ class TestAliOpenManage:
 
         assert manage.drive_id == "default-drive"
         assert isinstance(manage.auth, AliPanAuth)
+
+    def test_login_fallback_reads_aliopen_credentials(self):
+        from fundrives.aliopen import AliOpenManage
+
+        manage = AliOpenManage()
+        with (
+            mock.patch(
+                "fundrives.aliopen.drive.read_secret",
+                side_effect=lambda *path: path[-1],
+            ) as read_secret,
+            mock.patch.object(
+                manage, "drive_info", return_value={"default_drive_id": "drive-1"}
+            ),
+        ):
+            manage.login()
+
+        assert read_secret.call_args_list == [
+            mock.call("fundrive", "drives", "aliopen", key)
+            for key in ("refresh_token", "client_id", "client_secret")
+        ]
 
     def test_login_without_any_credentials_requires_real_secret_store(self):
         """未提供凭据时 login 会尝试读取本地 funsecret 配置，视为需要真实环境，跳过。"""
