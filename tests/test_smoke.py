@@ -243,6 +243,15 @@ class TestAliOpenManage:
         ):
             assert cls in mro
 
+    def test_get_header_before_login_raises_domain_error(self):
+        """未登录（self.auth 为 None）时应抛出 AliOpenRequestError，而不是裸 AttributeError。"""
+        from fundrives.aliopen import AliOpenManage
+        from fundrives.aliopen.drive import AliOpenRequestError
+
+        manage = AliOpenManage()
+        with pytest.raises(AliOpenRequestError, match="self.auth"):
+            manage.get_header()
+
     def test_get_header_uses_mocked_auth_without_network(self):
         """get_header 会调用 auth.get_access_token，此处打桩避免真实网络请求。"""
         from fundrives.aliopen import AliOpenManage, AliPanAuth
@@ -393,8 +402,12 @@ class TestPublicApiNormalAndEdgeCases:
         from fundrives.aliopen import AliPanAuth
 
         manage = _mocked_manage()
+        captured = {}
 
         def fake_request(method, url, json=None, headers=None, **kwargs):
+            captured["method"] = method
+            captured["url"] = url
+            captured["json"] = json
             response = mock.Mock(status_code=200)
             response.json.return_value = {"items": []}
             return response
@@ -410,6 +423,13 @@ class TestPublicApiNormalAndEdgeCases:
             result = manage.get_starred_list(limit=5)
 
         assert result == {"items": []}
+        assert captured["method"] == "post"
+        assert (
+            captured["url"]
+            == "https://openapi.alipan.com/adrive/v1.0/openFile/starredList"
+        )
+        assert captured["json"]["drive_id"] == "drive-xyz"
+        assert captured["json"]["limit"] == 5
 
     def test_create_share_without_password_omits_share_pwd(self):
         """create_share 不再有硬编码默认提取码，未传时 payload 不应包含 sharePwd。"""

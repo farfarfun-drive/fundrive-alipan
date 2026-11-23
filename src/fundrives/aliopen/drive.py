@@ -58,7 +58,12 @@ class Base:
         """构造带 access_token 的公共请求头。
 
         :return: 包含 ``Content-Type``、``Authorization`` 的请求头字典
+        :raises AliOpenRequestError: 尚未登录或未设置 ``self.auth`` 时抛出
         """
+        if self.auth is None:
+            raise AliOpenRequestError(
+                "未初始化鉴权信息（self.auth 为 None），请先调用 login() 或设置 self.auth"
+            )
         return {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.auth.get_access_token()['access_token']}",
@@ -279,7 +284,7 @@ class FileList(UserInfo):
             "marker": marker,
             "order_by": order_by,
         }
-        return self.post("/openFile/starredList", payload=params)
+        return self.post("/adrive/v1.0/openFile/starredList", payload=params)
 
 
 class FileInfo(FileList):
